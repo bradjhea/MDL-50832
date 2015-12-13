@@ -223,7 +223,16 @@ FloatingHeaders.prototype = {
      * @protected
      */
     lastUserCellTop: 0,
-
+    /**
+     * 
+     * The value which will determine whether to use the YUI to determine a horiztonal offset
+     * or whether to use native Javascript to calculate the offset
+     *
+     * @property mobileOffsetPoint
+     * @type Number
+     * @protected
+     */
+    mobileLeftOffset: 0,
     /**
      * A list of Nodes representing the generic floating rows.
      *
@@ -321,13 +330,30 @@ FloatingHeaders.prototype = {
         }
 
         var userCellList = Y.all(SELECTORS.USERCELL);
-
-        // The left of the user cells matches the left of the headerRow.
-        this.firstUserCellLeft = this.firstUserCell.getX();
+        
+        // use javascript selector within mobile 
+        var MobileFirstElement = document.querySelector(".header.user.cell").getBoundingClientRect().left,
+            MobileNonUserCell = document.querySelector("td.grade").getBoundingClientRect().left,
+            isMobileMode = (MobileFirstElement > this.mobileLeftOffset);
+        
         this.firstUserCellWidth = this.firstUserCell.get(OFFSETWIDTH);
+        
+        // Use a javascript element selector within mobile mode
+        if (isMobileMode) {
 
-        // The left of the user cells matches the left of the footer title.
-        this.firstNonUserCellLeft = this.firstNonUserCell.getX();
+            this.firstUserCellLeft = MobileFirstElement;
+            this.firstNonUserCellLeft = MobileNonUserCell;
+
+        } else {
+
+            // The left of the user cells matches the left of the headerRow.
+            this.firstUserCellLeft = this.firstUserCell.getX();
+
+            // The left of the user cells matches the left of the footer title.
+            this.firstNonUserCellLeft = this.firstNonUserCell.getX();
+
+        }
+
         this.firstNonUserCellWidth = this.firstNonUserCell.get(OFFSETWIDTH);
 
         if (userCellList.size() > 1) {
@@ -807,12 +833,16 @@ FloatingHeaders.prototype = {
 
         if (userFloats) {
             coord = this._getRelativeXFromX(floatingUserRelativePoint);
+            if (coord < 0) {
+                var gradeParentOffset = Y.one(".gradeparent").getX() - floatingUserRelativePoint;
+                coord = floatingUserRelativePoint - gradeParentOffset;
+            }
             userColumnStyles.left = coord + 'px';
             userColumnHeaderStyles.left = coord + 'px';
         } else {
-            coord = this._getRelativeXFromX(this.firstUserCellLeft);
-            userColumnStyles.left = coord + 'px';
-            userColumnHeaderStyles.left = coord + 'px';
+            coord = this._getRelativeXFromX(floatingUserRelativePoint);
+            userColumnStyles.left = (floatingUserRelativePoint + coord) + 'px';
+            userColumnHeaderStyles.left = (floatingUserRelativePoint + coord) + 'px';
         }
 
         // Update the miscellaneous left-only floats.
